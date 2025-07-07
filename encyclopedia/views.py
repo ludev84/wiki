@@ -12,11 +12,16 @@ class searchForm(forms.Form):
     search = forms.CharField(label="Search")
 
 
+class newEntryForm(forms.Form):
+    title = forms.CharField(label="Title")
+    new_entry = forms.CharField(widget=forms.Textarea, label="New entry")
+
+
 def index(request):
     return render(
         request,
         "encyclopedia/index.html",
-        {"entries": util.list_entries(), "form": searchForm()},
+        {"entries": util.list_entries(), "search_form": searchForm()},
     )
 
 
@@ -27,25 +32,41 @@ def entry(request, entry):
     return render(
         request,
         "encyclopedia/entry.html",
-        {"entry": entry_md, "title": entry},
+        {"entry": entry_md, "title": entry, "search_form": searchForm()},
     )
 
 
 def search(request):
+    entries = []
     if request.method == "POST":
-        form = searchForm(request.POST)
-        if form.is_valid():
-            search = form.cleaned_data["search"].lower()
+        s_form = searchForm(request.POST)
+        if s_form.is_valid():
+            search = s_form.cleaned_data["search"].lower()
             entries = list(map(lambda entry: entry.lower(), util.list_entries()))
             if search in entries:
                 return HttpResponseRedirect(reverse("entry", args=[search]))
-            entries_filtered = list(
+            entries = list(
                 filter(lambda entry: search in entry.lower(), util.list_entries())
             )
-            return render(
-                request,
-                "encyclopedia/search.html",
-                {"entries": entries_filtered, "form": form},
-            )
         else:
-            return render(request, "index", {"form": form})
+            return render(request, "index", {"search_form": s_form})
+    else:
+        s_form = searchForm(request.POST)
+    return render(
+        request,
+        "encyclopedia/search.html",
+        {"entries": entries, "search_form": s_form},
+    )
+
+
+def new(request):
+    if request.method == "POST":
+        n_form = newEntryForm(request.POST)
+
+    else:
+        n_form = newEntryForm()
+    return render(
+        request,
+        "encyclopedia/new.html",
+        {"new_entry_form": n_form, "search_form": searchForm()},
+    )
