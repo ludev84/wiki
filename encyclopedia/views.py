@@ -17,6 +17,10 @@ class newEntryForm(forms.Form):
     content = forms.CharField(widget=forms.Textarea, label="New entry")
 
 
+class editEntryForm(forms.Form):
+    content = forms.CharField(widget=forms.Textarea, label="Content")
+
+
 def _get_entries_with_lookup():
     """
     Helper function to get entries and create a case-insensitive lookup.
@@ -121,16 +125,14 @@ def edit(request, entry_name):
         return redirect("index")
 
     if request.method == "POST":
-        e_form = newEntryForm(request.POST)
+        e_form = editEntryForm(request.POST)
         if e_form.is_valid():
-            title = e_form.cleaned_data["title"]
             content = e_form.cleaned_data["content"].replace("\r\n", "\n")
-            util.save_entry(title, content)
-            return HttpResponseRedirect(reverse("entry", args=[title]))
+            util.save_entry(entry_name, content)
+            return HttpResponseRedirect(reverse("entry", args=[entry_name]))
     else:
-        e_form = newEntryForm(
+        e_form = editEntryForm(
             initial={
-                "title": entry_name,
                 "content": entry_md,
             }
         )
