@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.http import HttpResponseRedirect
 
 
+import random
 import markdown2
 from . import util
 
@@ -60,7 +61,6 @@ def search(request):
         s_form = searchForm(request.POST)
         if s_form.is_valid():
             search_term = s_form.cleaned_data["search"].lower()
-
             # Check for exact match (case-insensitive)
             if search_term in entries_lookup:
                 # Redirect to the original case version
@@ -142,3 +142,11 @@ def edit(request, entry_name):
         "encyclopedia/edit.html",
         {"edit_entry_form": e_form, "entry_name": entry_name},
     )
+
+
+def random_page(request):
+    entries, entries_lookup = _get_entries_with_lookup()
+    if not entries:
+        return redirect("index")
+    entry = random.choice(entries)
+    return redirect(reverse("entry", args=[entry]))
