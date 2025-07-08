@@ -14,14 +14,26 @@ class searchForm(forms.Form):
 
 class newEntryForm(forms.Form):
     title = forms.CharField(label="Title")
-    new_entry = forms.CharField(widget=forms.Textarea, label="New entry")
+    content = forms.CharField(widget=forms.Textarea, label="New entry")
+
+
+def _get_entries_with_lookup():
+    """
+    Helper function to get entries and create a case-insensitive lookup.
+    Returns tuple of (original_entries, lowercase_lookup_dict)
+    """
+    entries = util.list_entries()
+    # Create a lookup dict: lowercase_title -> original_title
+    entries_lookup = {entry.lower(): entry for entry in entries}
+    return entries, entries_lookup
 
 
 def index(request):
+    entries, _ = _get_entries_with_lookup()
     return render(
         request,
         "encyclopedia/index.html",
-        {"entries": util.list_entries(), "search_form": searchForm()},
+        {"entries": entries, "search_form": searchForm()},
     )
 
 
@@ -37,34 +49,64 @@ def entry(request, entry):
 
 
 def search(request):
-    entries = []
+    entries, entries_lookup = _get_entries_with_lookup()
+    filtered_entries = []
+
     if request.method == "POST":
         s_form = searchForm(request.POST)
         if s_form.is_valid():
-            search = s_form.cleaned_data["search"].lower()
-            entries = list(map(lambda entry: entry.lower(), util.list_entries()))
-            if search in entries:
-                return HttpResponseRedirect(reverse("entry", args=[search]))
-            entries = list(
-                filter(lambda entry: search in entry.lower(), util.list_entries())
-            )
+            search_term = s_form.cleaned_data["search"].lower()
+
+            # Check for exact match (case-insensitive)
+            if search_term in entries_lookup:
+                # Redirect to the original case version
+                return HttpResponseRedirect(
+                    reverse("entry", args=[entries_lookup[search_term]])
+                )
+
+            # Filter entries that contain the search term
+            filtered_entries = [
+                entry for entry in entries if search_term in entry.lower()
+            ]
         else:
-            return render(request, "index", {"search_form": s_form})
+            return render(request, "encyclopedia/index.html", {"search_form": s_form})
     else:
-        s_form = searchForm(request.POST)
+        s_form = searchForm()
+
     return render(
         request,
         "encyclopedia/search.html",
-        {"entries": entries, "search_form": s_form},
+        {"entries": filtered_entries, "search_form": s_form},
     )
 
 
 def new(request):
+    entries, entries_lookup = _get_entries_with_lookup()
+
     if request.method == "POST":
         n_form = newEntryForm(request.POST)
+        if n_form.is_valid():
+            title = n_form.cleaned_data["title"]
+            title_lower = title.lower()
 
+            # Check if entry already exists (case-insensitive)
+            if title_lower in entries_lookup:
+                # Redirect to existing entry with original case
+                # return HttpResponseRedirect(reverse("entry", args=[entries_lookup[title_lower]]))
+                n_form.add_error("title", "An entry with this title already exists.")
+                return render(
+                    request,
+                    "encyclopedia/new.html",
+                    {"new_entry_form": n_form, "search_form": searchForm()},
+                )
+            else:
+                content = n_form.cleaned_data["content"]
+                util.save_entry(title, content)
+                # Redirect to the new entry with the exact title provided
+                return HttpResponseRedirect(reverse("entry", args=[title]))
     else:
         n_form = newEntryForm()
+
     return render(
         request,
         "encyclopedia/new.html",

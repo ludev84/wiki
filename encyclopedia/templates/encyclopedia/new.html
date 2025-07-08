@@ -11,7 +11,7 @@
     <form action="{% url 'new' %}" method="post">
         {% csrf_token %}
         <!-- <label for="">Title:</label> -->
-        {{ new_entry_form }}
+        {{ new_entry_form.as_p }}
         <br>
         <!-- <label for="">New entry:</label> -->
         <br>
