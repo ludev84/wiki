@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django import forms
 from django.urls import reverse
 from django.http import HttpResponseRedirect
@@ -100,7 +100,7 @@ def new(request):
                     {"new_entry_form": n_form, "search_form": searchForm()},
                 )
             else:
-                content = n_form.cleaned_data["content"]
+                content = n_form.cleaned_data["content"].replace("\r\n", "\n")
                 util.save_entry(title, content)
                 # Redirect to the new entry with the exact title provided
                 return HttpResponseRedirect(reverse("entry", args=[title]))
@@ -111,4 +111,32 @@ def new(request):
         request,
         "encyclopedia/new.html",
         {"new_entry_form": n_form, "search_form": searchForm()},
+    )
+
+
+def edit(request, entry_name):
+    print(entry_name)
+    entry_md = util.get_entry(entry_name)
+    if entry_md is None:
+        return redirect("index")
+
+    if request.method == "POST":
+        e_form = newEntryForm(request.POST)
+        if e_form.is_valid():
+            title = e_form.cleaned_data["title"]
+            content = e_form.cleaned_data["content"].replace("\r\n", "\n")
+            util.save_entry(title, content)
+            return HttpResponseRedirect(reverse("entry", args=[title]))
+    else:
+        e_form = newEntryForm(
+            initial={
+                "title": entry_name,
+                "content": entry_md,
+            }
+        )
+
+    return render(
+        request,
+        "encyclopedia/edit.html",
+        {"edit_entry_form": e_form, "entry_name": entry_name},
     )

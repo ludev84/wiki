@@ -8,6 +8,7 @@
 
     {% if entry %}
         {{ entry|safe }}
+        <button><a href="{% url 'edit' title %}">Edit</a></button>
     {% else %}
         <h1>Entry not found</h1>
     {% endif %}
